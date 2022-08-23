@@ -1,4 +1,9 @@
+<img align="right" src="assets/logo.webp" width="20%">
+
 ## Rescrape
+
+<br align="clear"/>
+
 ```java
 RescrapeAPI.withUserAgent("my unique user agent")
     .scrape(search(r("aww")).keywords("dog").limit(100))
