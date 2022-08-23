@@ -1,7 +1,7 @@
 <img align="right" src="assets/logo.webp" width="20%">
 
 ## Rescrape
-
+![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/bluelhf/Rescrape/Java%20CI%20with%20Maven/main?color=FFFFFF)
 <br align="clear"/>
 
 ```java
