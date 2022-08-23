@@ -1,4 +1,4 @@
-<img align="right" src="assets/log.webp" width="20%">
+<img align="right" src="assets/logo.webp" width="20%">
 
 ## Rescrape
 
