@@ -129,7 +129,7 @@ public class RescrapeAPI {
             final List<URL> childURLs = query.getChildURLs();
             for (final URL child : childURLs) {
                 futures.add(new MediaExtractor(child.openConnection(),
-                    exceptionHandler).extractURLs().thenAccept(list -> {
+                    exceptionHandler).extractURLs(extractionExecutor).thenAccept(list -> {
                     list.forEach(urlConsumer);
                     urls.addAll(list);
                 }));
