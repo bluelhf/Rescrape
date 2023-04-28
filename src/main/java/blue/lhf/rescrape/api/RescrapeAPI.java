@@ -8,7 +8,7 @@ import mx.kenzie.argo.Json;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
-import java.net.URL;
+import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
@@ -17,7 +17,7 @@ import static blue.lhf.rescrape.api.search.Search.search;
 import static java.util.concurrent.ThreadLocalRandom.current;
 
 public class RescrapeAPI {
-    private Consumer<HttpsURLConnection> connectionConfigurator = (c) -> {
+    private Consumer<HttpURLConnection> connectionConfigurator = (c) -> {
         c.setConnectTimeout(5000);
         c.setReadTimeout(5000);
 
@@ -60,8 +60,13 @@ public class RescrapeAPI {
      * The connection configurator is called after creating the base connection for scraping
      * to configure values such as the User-Agent request header and relevant timeouts.
      * */
-    public RescrapeAPI connects(final Consumer<HttpsURLConnection> connectionConfigurator) {
-        this.connectionConfigurator = connectionConfigurator;
+    public RescrapeAPI connects(final Consumer<HttpURLConnection> connectionConfigurator) {
+        final Consumer<HttpURLConnection> old = this.connectionConfigurator;
+        this.connectionConfigurator = (url) -> {
+            old.accept(url);
+            connectionConfigurator.accept(url);
+        };
+
         return this;
     }
 
@@ -128,7 +133,9 @@ public class RescrapeAPI {
             final RedditQuery query = json.toObject(new RedditQuery());
             final List<URL> childURLs = query.getChildURLs();
             for (final URL child : childURLs) {
-                futures.add(new MediaExtractor(child.openConnection(),
+                final HttpURLConnection childConnection = (HttpURLConnection) child.openConnection();
+                connectionConfigurator.accept(childConnection);
+                futures.add(new MediaExtractor(childConnection,
                     exceptionHandler).extractURLs(extractionExecutor).thenAccept(list -> {
                     list.forEach(urlConsumer);
                     urls.addAll(list);
