@@ -63,10 +63,6 @@ public class RescrapeTest {
         return !url.getFile().contains("size_restricted");
     }
 
-    private static boolean notMobile(final URL url) {
-        return !url.getFile().contains("mobile");
-    }
-
     private static boolean notExternalPreview(final URL url) {
         return !url.getHost().startsWith("external-preview.redd.it");
     }

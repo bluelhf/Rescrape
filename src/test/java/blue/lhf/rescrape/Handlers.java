@@ -78,7 +78,10 @@ public enum Handlers {
 
         @NotNull
         private String getId(URL url) {
-            return url.getFile().substring(1, url.getFile().indexOf('-'));
+            final int files = Math.max(url.getFile().indexOf("/files/") + 7, 0);
+            int dash = url.getFile().indexOf('-');
+            if (dash == -1) dash = url.getFile().length() - 4;
+            return url.getFile().substring(files, dash);
         }
 
         private URL getDownloadURL(final String id) throws Exception {

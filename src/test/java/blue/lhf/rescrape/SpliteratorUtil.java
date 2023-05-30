@@ -19,6 +19,18 @@ public class SpliteratorUtil {
         };
     }
 
+    public static UnaryOperator<Spliterator<URL>> peek(final Consumer<URL> peek) {
+        return spliterator -> new AbstractSpliterator<>(spliterator.estimateSize(), spliterator.characteristics()) {
+            @Override
+            public boolean tryAdvance(final Consumer<? super URL> action) {
+                return spliterator.tryAdvance((url) -> {
+                    peek.accept(url);
+                    action.accept(url);
+                });
+            }
+        };
+    }
+
     public static <A, C> Function<Spliterator<A>, Spliterator<C>> partition(final Function<A, Function<A, C>> key) {
         return spliterator -> new AbstractSpliterator<>(spliterator.estimateSize(), spliterator.characteristics()) {
             @Override
