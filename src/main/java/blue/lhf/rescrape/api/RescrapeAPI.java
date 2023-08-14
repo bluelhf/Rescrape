@@ -2,6 +2,7 @@ package blue.lhf.rescrape.api;
 
 import blue.lhf.rescrape.api.query.Part;
 import blue.lhf.rescrape.api.search.Search;
+import blue.lhf.rescrape.api.search.SearchBound;
 import blue.lhf.rescrape.util.MediaExtractor;
 import blue.lhf.rescrape.util.query.RedditQuery;
 import mx.kenzie.argo.Json;
@@ -11,9 +12,11 @@ import java.io.IOException;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import static blue.lhf.rescrape.api.search.Search.search;
+import static blue.lhf.rescrape.api.search.SearchBound.after;
 import static java.util.concurrent.ThreadLocalRandom.current;
 
 public class RescrapeAPI {
@@ -116,7 +119,7 @@ public class RescrapeAPI {
         final Consumer<Exception> exceptionHandler) {
 
         final String base = "https://reddit.com/search.json";
-        HttpsURLConnection connection;
+        final HttpsURLConnection connection;
         try {
             final URL url = new URL(base + search.toQuery());
             connection = (HttpsURLConnection) url.openConnection();
@@ -127,10 +130,14 @@ public class RescrapeAPI {
             return CompletableFuture.failedFuture(e);
         }
 
+
         final List<URL> urls = new CopyOnWriteArrayList<>();
         List<CompletableFuture<Void>> futures = new ArrayList<>();
+        final String last;
+        final int found;
         try (Json json = new Json(connection.getInputStream())) {
             final RedditQuery query = json.toObject(new RedditQuery());
+            found = query.data.children.length;
             final List<URL> childURLs = query.getChildURLs();
             for (final URL child : childURLs) {
                 final HttpURLConnection childConnection = (HttpURLConnection) child.openConnection();
@@ -141,9 +148,16 @@ public class RescrapeAPI {
                     urls.addAll(list);
                 }));
             }
+
+            last = query.data.after;
         } catch (IOException e) {
             exceptionHandler.accept(e);
             return CompletableFuture.failedFuture(e);
+        }
+
+        if (last != null && found < search.limit()) {
+            futures.add(scrape(search.bound(after(last)).limit(search.limit() - found), urlConsumer, exceptionHandler)
+                    .thenAccept(urls::addAll));
         }
 
         return CompletableFuture.allOf(futures

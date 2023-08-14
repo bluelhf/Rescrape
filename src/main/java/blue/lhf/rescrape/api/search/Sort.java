@@ -5,7 +5,7 @@ import java.util.Locale;
 /**
  * Represents different sorts for Reddit results.
  * */
-public enum Sort {
+public enum Sort implements Parameter {
     RELEVANCE,
     HOT,
     TOP,
@@ -13,6 +13,6 @@ public enum Sort {
     COMMENTS;
 
     public String toQuery() {
-        return name().toLowerCase(Locale.ROOT);
+        return "sort=" + name().toLowerCase(Locale.ROOT);
     }
 }

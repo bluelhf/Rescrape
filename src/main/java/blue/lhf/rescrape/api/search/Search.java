@@ -15,24 +15,27 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * Represents a Reddit search, including parameters and a query.
  * */
 public final class Search {
-    private Query query;
-    private Sort sort;
-    private Time time;
-    private SearchType type;
+    private @NotNull Query query;
+    private @NotNull Sort sort;
+    private @NotNull Time time;
+    private @NotNull SearchType type;
+    private @Nullable SearchBound bound;
     private int limit;
 
-    private Search(Query query, Sort sort,
-                  Time time, SearchType type, int limit) {
+    private Search(@NotNull final Query query, @NotNull final Sort sort,
+                   @NotNull final Time time, @NotNull final SearchType type,
+                   final int limit, @Nullable final SearchBound bound) {
         this.query = query;
         this.sort = sort;
         this.time = time;
         this.type = type;
         this.limit = limit;
+        this.bound = bound;
     }
 
     @Contract(value = "_ -> new", pure = true)
     public static @NotNull Search search(final Query query) {
-        return new Search(query, RELEVANCE, ALL, POSTS, 25);
+        return new Search(query, RELEVANCE, ALL, POSTS, 25, null);
     }
 
     @Contract("_ -> new")
@@ -41,51 +44,61 @@ public final class Search {
     }
 
     @Contract(value = "_ -> this", mutates = "this")
-    public Search query(Query query) {
+    public Search query(final Query query) {
         this.query = query;
         return this;
     }
 
     @Contract(value = "_ -> this", mutates = "this")
-    public Search sort(Sort sort) {
+    public Search sort(final Sort sort) {
         this.sort = sort;
         return this;
     }
 
     @Contract(value = "_ -> this", mutates = "this")
-    public Search time(Time time) {
+    public Search time(final Time time) {
         this.time = time;
         return this;
     }
 
     @Contract(value = "_ -> this", mutates = "this")
-    public Search type(SearchType type) {
+    public Search type(final SearchType type) {
         this.type = type;
+        return this;
+    }
+
+    @Contract(value = "_ -> this", mutates = "this")
+    public Search bound(final SearchBound bound) {
+        this.bound = bound;
         return this;
     }
 
     @Range(from = 1, to = 100)
     @Contract(value = "_ -> this", mutates = "this")
-    public Search limit(int limit) {
+    public Search limit(final int limit) {
         this.limit = limit;
         return this;
     }
 
+    public int limit() {
+        return this.limit;
+    }
 
     public @NotNull String toQuery() {
         return "?q=" + encode(query.toQueryString(), UTF_8) +
             "&include_over_18=true" +
-            "&sort=" + sort.toQuery() +
-            "&t=" + time.toQuery() +
-            "&type=" + type.toQuery() +
+            "&" + sort.toQuery() +
+            "&" + time.toQuery() +
+            "&" + type.toQuery() +
+            (bound != null ? "&" + bound.toQuery() : "") +
             "&limit=" + limit;
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(final Object obj) {
         if (obj == this) return true;
         if (obj == null || obj.getClass() != this.getClass()) return false;
-        var that = (Search) obj;
+        final var that = (Search) obj;
         return Objects.equals(this.query, that.query) &&
             Objects.equals(this.sort, that.sort) &&
             Objects.equals(this.time, that.time) &&
