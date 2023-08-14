@@ -7,10 +7,16 @@ import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
 import java.net.*;
 import java.nio.file.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
+import static java.lang.ProcessBuilder.Redirect.INHERIT;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Locale.ROOT;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 public enum Handlers {
     IMGUR() {
@@ -109,7 +115,7 @@ public enum Handlers {
 
         @Override
         public String getName(URL url) {
-            return getId(url) + ".mp4";
+            return getId(url) + ".avi";
         }
 
         @NotNull
@@ -121,42 +127,43 @@ public enum Handlers {
         protected InputStream handle(URL url) {
             try {
                 final String id = getId(url);
-                final Path tmp = Files.createTempDirectory("rescrape");
 
+                URL videoSource = null;
                 for (final int resolution : VIDEO_RESOLUTIONS) {
-                    final URL videoSource = new URL("https://v.redd.it/" + id + "/HLS_" + resolution + ".ts");
-                    final HttpsURLConnection connection = (HttpsURLConnection) videoSource.openConnection();
+                    final URL candidate = new URL("https://v.redd.it/" + id + "/HLS_" + resolution + ".ts");
+                    final HttpsURLConnection connection = (HttpsURLConnection) candidate.openConnection();
                     if (connection.getResponseCode() == 200) {
-                        final Path path = tmp.resolve("video.ts");
-                        Files.copy(connection.getInputStream(), path, REPLACE_EXISTING);
+                        videoSource = candidate;
                         break;
                     }
                 }
 
+                if (videoSource == null)
+                    throw new IllegalStateException("No video source for " + url);
+
+                URL audioSource = null;
                 for (final int bitrate : AUDIO_BITRATES) {
-                    final URL audioSource = new URL("https://v.redd.it/" + id + "/HLS_AUDIO_" + bitrate + "_K.aac");
-                    final HttpsURLConnection connection = (HttpsURLConnection) audioSource.openConnection();
+                    final URL candidate = new URL("https://v.redd.it/" + id + "/HLS_AUDIO_" + bitrate + "_K.aac");
+                    final HttpsURLConnection connection = (HttpsURLConnection) candidate.openConnection();
                     if (connection.getResponseCode() == 200) {
-                        final Path path = tmp.resolve("audio.aac");
-                        Files.copy(connection.getInputStream(), path, REPLACE_EXISTING);
+                        audioSource = candidate;
                         break;
                     }
                 }
+
+                final List<String> command = new ArrayList<>(Arrays.asList(
+                        "ffmpeg", "-i", videoSource.toString()
+                ));
+                if (audioSource != null) command.addAll(Arrays.asList("-i", audioSource.toString()));
+                command.addAll(Arrays.asList("-loglevel", "error", "-f", "avi", "-qscale", "0", "-"));
 
                 // Combine video.ts and audio.aac with ffmpeg
-                final Process process = new ProcessBuilder("ffmpeg", "-i", "video.ts", "-i", "audio.aac", "-c", "copy", "output.mp4")
-                    .directory(tmp.toFile())
-                    .start();
+                final Process process = new ProcessBuilder(command.toArray(new String[0]))
+                        .redirectError(INHERIT).start();
 
-                if (process.waitFor() != 0) {
-                    process.getErrorStream().transferTo(System.err);
-                }
-                return Files.newInputStream(tmp.resolve("output.mp4"));
+                return process.getInputStream();
             } catch (IOException e) {
                 e.printStackTrace();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                Thread.currentThread().interrupt();
             }
 
             return null;
