@@ -8,9 +8,11 @@ public class RedditQuery {
     public List<URL> getChildURLs() {
         final List<URL> urls = new ArrayList<>();
         for (final QueryPost child : data.children) {
-            try {
-                urls.add(new URL(child.data.url));
-            } catch (MalformedURLException e) {
+            for (final String url : child.data.getURLs()) {
+                try {
+                    urls.add(new URL(url));
+                } catch (MalformedURLException e) {
+                }
             }
         }
 
