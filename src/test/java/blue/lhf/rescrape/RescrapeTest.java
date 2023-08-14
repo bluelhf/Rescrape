@@ -1,21 +1,22 @@
 package blue.lhf.rescrape;
 
-import blue.lhf.rescrape.api.search.Search;
-
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.net.URL;
-import java.nio.file.*;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.stream.Stream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Scanner;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static blue.lhf.rescrape.Logger.LOGGER;
-import static blue.lhf.rescrape.SpliteratorUtil.*;
 import static blue.lhf.rescrape.api.RescrapeAPI.rescrape;
-import static blue.lhf.rescrape.api.query.Query.*;
+import static blue.lhf.rescrape.api.query.Query.r;
 import static blue.lhf.rescrape.api.search.Search.search;
-import static blue.lhf.rescrape.api.search.Sort.*;
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static blue.lhf.rescrape.api.search.Sort.TOP;
 
 public class RescrapeTest {
 
@@ -69,6 +70,7 @@ public class RescrapeTest {
                 try {
                     Files.createFile(target);
                 } catch (final IOException e) {
+                    LOGGER.delete(index);
                     throw new UncheckedIOException(e);
                 }
 
@@ -99,6 +101,7 @@ public class RescrapeTest {
 
         }
         downloadPool.shutdown();
+        LOGGER.close();
     }
 
     private static boolean notSizeRestricted(final URL url) {
