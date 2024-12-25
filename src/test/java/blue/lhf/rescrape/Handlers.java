@@ -28,7 +28,8 @@ public enum Handlers {
         @Override
         protected InputStream handle(URL url) {
             try {
-                return url.openStream();
+                final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                return new SizedInputStream(connection.getInputStream(), connection.getContentLengthLong());
             } catch (IOException e) {
                 System.err.println("Failed to download " + url);
                 e.printStackTrace();
@@ -73,7 +74,8 @@ public enum Handlers {
             final URL downloadURL;
             try {
                 downloadURL = getDownloadURL(id);
-                return downloadURL.openStream();
+                final HttpURLConnection connection = (HttpURLConnection) downloadURL.openConnection();
+                return new SizedInputStream(connection.getInputStream(), connection.getContentLengthLong());
             } catch (Exception e) {
                 System.err.println("Failed to download " + url);
                 e.printStackTrace();
@@ -179,7 +181,8 @@ public enum Handlers {
         @Override
         protected InputStream handle(URL url) {
             try {
-                return url.openStream();
+                final HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                return new SizedInputStream(connection.getInputStream(), connection.getContentLengthLong());
             } catch (IOException e) {
                 System.err.println("Failed to download " + url);
                 e.printStackTrace();
