@@ -32,7 +32,7 @@ public class Logger implements Closeable {
                     final Collection<String> values = map.values();
                     int counter = 0;
                     for (final String line : values) {
-                        stream.printf(format, ++counter, line);
+                        stream.printf(format, counter++, line);
                     }
 
                     Thread.sleep(1000);
