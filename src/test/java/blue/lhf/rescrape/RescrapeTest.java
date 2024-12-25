@@ -14,7 +14,7 @@ import java.util.concurrent.Executors;
 
 import static blue.lhf.rescrape.Logger.LOGGER;
 import static blue.lhf.rescrape.api.RescrapeAPI.rescrape;
-import static blue.lhf.rescrape.api.query.Query.r;
+import static blue.lhf.rescrape.api.query.Query.*;
 import static blue.lhf.rescrape.api.search.Search.search;
 import static blue.lhf.rescrape.api.search.Sort.TOP;
 
@@ -32,15 +32,16 @@ public class RescrapeTest {
         final ExecutorService downloadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
         final int status = LOGGER.println("Downloading data...");
 
-        final String subreddit = "ProgrammingAnimemes";
+        final String query = "ProgrammingAnimemes";
         rescrape().connects(conf -> {
             LOGGER.printlnEphemeral("Connect to " + conf.getURL().toString().replaceAll("(?<=^.{49}).*$", "…"));
             conf.setReadTimeout(30_000);
             conf.setConnectTimeout(30_000);
-        }).scrape(search(r(subreddit)).limit(1000).sort(TOP), url -> {
+        }).scrape(search(r(query).limit(1000).sort(TOP), url -> {
             CompletableFuture.runAsync(() -> {
 
-                final int index = LOGGER.println("Handling " + url.toString().replaceAll("(?<=^.{49}).*$", "…"));
+                final String truncatedUrl = url.toString().replaceAll("(?<=^.{49}).*$", "…");
+                final int index = LOGGER.println("Handling " + truncatedUrl);
                 if (!notThumbnail(url)
                         || !notExternalPreview(url)
                         || !notSizeRestricted(url)
@@ -57,7 +58,7 @@ public class RescrapeTest {
 
                 final String filename = handlers.getName(url);
 
-                final Path target = Path.of("download", subreddit, filename);
+                final Path target = Path.of("download", query, filename);
                 try {
                     Files.createDirectories(target.getParent());
                 } catch (final IOException e) {
@@ -76,7 +77,7 @@ public class RescrapeTest {
 
                 try (final InputStream stream = handlers.handle(url);
                      final OutputStream output = Files.newOutputStream(target)) {
-                    LOGGER.println(index, "Downloading %s...".formatted(url.toString().replaceAll("(?<=^.{49}).*$", "…")));
+                    LOGGER.println(index, "Downloading %s...".formatted(truncatedUrl));
                     if (stream == null) {
                         LOGGER.delete(index);
                         return;
@@ -85,7 +86,12 @@ public class RescrapeTest {
                     int read = 0, progress = 0;
                     while ((read = stream.read(buffer, 0, buffer.length)) != -1) {
                         progress += read;
-                        LOGGER.println(index, "Downloaded %d bytes of %s".formatted(progress, url.toString().replaceAll("(?<=^.{49}).*$", "…")));
+                        if (stream instanceof SizedInputStream sized) {
+                            final String sizeFormat = "%0" + ((int) Math.log10(sized.getSize()) + 1) + "d";
+                            LOGGER.println(index, ("Downloaded " + sizeFormat + "/" + sizeFormat + " bytes of %s").formatted(progress, sized.getSize(), truncatedUrl));
+                        } else {
+                            LOGGER.println(index, "Downloaded %d bytes of %s".formatted(progress, truncatedUrl));
+                        }
                         output.write(buffer, 0, read);
                     }
                     LOGGER.delete(index);
